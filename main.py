@@ -89,6 +89,12 @@ async def play(ctx, *url):
                      for x in sp.playlist_tracks(playlist_URI)["items"]]
             for song in songs:
                 await play(ctx, song)
+        elif 'https://open.spotify.com/album' in song:
+            album_URI = song.split("/")[-1].split("?")[0]
+            songs = [f'{x["name"]} - {x["artists"][0]["name"]}'
+                     for x in sp.album_tracks(album_URI)["items"]]
+            for song in songs:
+                await play(ctx, song)
         else:
             with YoutubeDL(YDL_OPTIONS) as ydl:
                 if 'https://www.youtube.com/' in song:
