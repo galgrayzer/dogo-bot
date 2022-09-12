@@ -35,7 +35,8 @@ sp = Spotify(auth=token)
 
 # Vars:
 current = None
-queue = []
+url_queue = []
+song_queue = []
 bot = commands.Bot(command_prefix='.', intents=discord.Intents.all())
 
 
@@ -102,20 +103,22 @@ async def play(ctx, *url):
                 if not player.is_playing():
                     async with ctx.typing():
                         player.play(discord.FFmpegPCMAudio(URL, **FFMPEG_OPTIONS),
-                                    after=lambda e: play(play_next(player) if queue else None))
+                                    after=lambda e: play(play_next(player) if url_queue else None))
                         await ctx.send(f'Now playing: {info["title"]}')
                         await ctx.send(url)
                 else:
-                    queue.append(URL)
+                    url_queue.append(URL)
+                    song_queue.append(info["title"])
                     await ctx.send(f'Added to queue: {info["title"]}')
     else:
         await ctx.send('You need to join a voice channel first!')
 
 
 def play_next(player):
-    if queue:
-        player.play(discord.FFmpegPCMAudio(queue.pop(0), **
+    if url_queue:
+        player.play(discord.FFmpegPCMAudio(url_queue.pop(0), **
                     FFMPEG_OPTIONS), after=lambda e: play_next(player))
+        song_queue.pop(0)
 
 
 @bot.command(name='stop', help='Stopping the song')  # Stop
@@ -138,6 +141,7 @@ async def skip(ctx):
         if player.is_playing():
             player.stop()
             await ctx.send('Skipped the song')
+            # Add current
             play_next(player)
     else:
         await ctx.send('You need to be in a voice channel for this command to work')
@@ -155,7 +159,7 @@ async def pause(ctx):
         await ctx.send('You need to be in a voice channel for this command to work')
 
 
-@bot.command(name='resume', help='Resuming the song')  # Resume
+@bot.command(name='resume', help='Resuming the song', aliases=['h'])  # Resume
 async def resume(ctx):
     channel = ctx.author.voice.channel
     if channel:
@@ -225,6 +229,17 @@ async def say(ctx):
 
     else:
         await ctx.send('You need to join a voice channel first!')
+
+
+# Queue
+@bot.command(name='queue', help='Showing currntly queue', aliases=['q'])
+async def queue(ctx):
+    str = ''
+    count = 1
+    for song in song_queue:
+        str += f'{count}. {song}\n'
+        count += 1
+    await ctx.send(f"Now playing - {current}\n" + str)
 
 
 def create_voice_stream(text, lang):  # Create voice stream
