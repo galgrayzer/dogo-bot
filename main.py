@@ -109,7 +109,7 @@ async def play(ctx, *url):
                 if not player.is_playing():
                     async with ctx.typing():
                         player.play(discord.FFmpegPCMAudio(URL, **FFMPEG_OPTIONS),
-                                    after=lambda e: play(play_next(player) if url_queue else None))
+                                    after=await play_next(player))
                         await ctx.send(f'Now playing: {info["title"]}')
                         await ctx.send(url)
                 else:
@@ -120,11 +120,16 @@ async def play(ctx, *url):
         await ctx.send('You need to join a voice channel first!')
 
 
-def play_next(player):
+async def lamb(player):
+    await play_next(player)
+
+
+async def play_next(player):
     if url_queue:
         player.play(discord.FFmpegPCMAudio(url_queue.pop(0), **
-                    FFMPEG_OPTIONS), after=lambda e: play_next(player))
-        song_queue.pop(0)
+                                           FFMPEG_OPTIONS), after=await lamb(player))
+        global current
+        current = song_queue.pop(0)
 
 
 @bot.command(name='stop', help='Stopping the song')  # Stop
@@ -147,8 +152,7 @@ async def skip(ctx):
         if player.is_playing():
             player.stop()
             await ctx.send('Skipped the song')
-            # Add current
-            play_next(player)
+            await play_next(player)
     else:
         await ctx.send('You need to be in a voice channel for this command to work')
 
@@ -229,7 +233,7 @@ async def say(ctx):
                 return
         if not player.is_playing():
             player.play(create_voice_stream(message, lang),
-                        after=lambda e: play_next(player))
+                        after=await lamb(player))
         else:
             await ctx.send('I am already playing somthing...')
 
@@ -246,6 +250,17 @@ async def queue(ctx):
         str += f'{count}. {song}\n'
         count += 1
     await ctx.send(f"Now playing - {current}\n" + str)
+
+
+@bot.command(name='clear', help='Clearing the queue')
+async def clear(ctx):
+    global song_queue
+    global url_queue
+    global current
+    current = None
+    url_queue = []
+    song_queue = []
+    await stop(ctx)
 
 
 def create_voice_stream(text, lang):  # Create voice stream
