@@ -92,7 +92,7 @@ async def leave(ctx):
 # Play
 @bot.hybrid_command(name='play', description='Playing a song from YouTube', help='Playing a song from YouTube', aliases=['p'])
 @discord.app_commands.guilds(discord.Object(880926842603847680), discord.Object(554699594420846616))
-async def play(ctx, song):
+async def play(ctx, *, song):
     if not song:
         ctx.send('You have to provide a song!')
     else:
