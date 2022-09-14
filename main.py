@@ -33,19 +33,30 @@ sp = Spotify(auth=token)
 
 
 # Vars:
-url_queue = []
 
-current_ffmpeg = None
+url_queue = []
+song_queue = []
+
+# Intents:
+
 intents = discord.Intents.all()
 intents.message_content = True
 intents.voice_states = True
+
+# Client:
+
 bot = commands.Bot(command_prefix='.', intents=intents)
+
+# On Start:
 
 
 @bot.event
 async def on_ready():
     await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="Your command | perfix: ."))
     print('Bot is up and running!')
+
+
+# Commands:
 
 
 @bot.command(name='ping', help='Returning the current ping time the bot takes to respond')  # Ping
@@ -106,6 +117,7 @@ async def play(ctx, *url):
                         videosSearch.result()['result'][0]['id']
                 info = ydl.extract_info(url, download=False)
                 URL = info['url']
+                song_queue.append(info['title'])
                 if not player.is_playing():
                     async with ctx.typing():
                         player.play(discord.FFmpegPCMAudio(
@@ -125,6 +137,7 @@ def play_next(player):
         player.play(discord.FFmpegPCMAudio(url_queue.pop(0), **
                                            FFMPEG_OPTIONS), after=lambda e: print(
             'Player error: %s' % e) if e else play_next(player))
+    song_queue.pop(0)
 
 
 @bot.command(name='stop', help='Stopping the song')  # Stop
@@ -208,7 +221,7 @@ async def say(ctx):
                 return
         if not player.is_playing():
             player.play(create_voice_stream(message, lang),
-                        after=lambda e: print('Player error: %s' % e) if e else play_next(player))
+                        after=lambda e: print('Player error: %s' % e) if e else play_next(player) if song_queue else None)
         else:
             await ctx.send('I am already playing somthing...')
 
@@ -220,6 +233,17 @@ def create_voice_stream(text, lang):  # Create voice stream
     tts = gTTS(text=text, lang=lang)
     tts.save('voice_stream.mp3')
     return discord.FFmpegPCMAudio('voice_stream.mp3')
+
+
+@bot.command(name='queue', help='Showing player queue', aliases=['q'])
+async def queue(ctx):
+    if song_queue:
+        queue_str = f'*Now Playing: {song_queue[0]}*\n'
+        for index in range(1, len(song_queue)):
+            queue_str += f'{index}. {song_queue[index]}\n'
+    else:
+        queue_str = 'Nothing is playing right now.'
+    await ctx.send(queue_str)
 
 
 def main():
