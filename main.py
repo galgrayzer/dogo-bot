@@ -53,18 +53,20 @@ bot = commands.Bot(command_prefix='.', intents=intents)
 @bot.event
 async def on_ready():
     await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="Your command | perfix: ."))
-    print('Bot is up and running!')
-
+    await bot.tree.sync(guild=discord.Object(id=880926842603847680))
+    await bot.tree.sync(guild=discord.Object(id=554699594420846616))
 
 # Commands:
 
 
-@bot.command(name='ping', help='Returning the current ping time the bot takes to respond')  # Ping
+@bot.hybrid_command(name='ping', description='Returning the current ping time the bot takes to respond', help='Returning the current ping time the bot takes to respond')
+@discord.app_commands.guilds(discord.Object(880926842603847680), discord.Object(554699594420846616))
 async def ping(ctx):
     await ctx.send(f'Current ping is {round(bot.latency * 1000)}ms')
 
 
-@bot.command(name='join', help='Joining the voice channel')  # Join
+@bot.hybrid_command(name='join', help='Joining the voice channel')  # Join
+@discord.app_commands.guilds(discord.Object(880926842603847680), discord.Object(554699594420846616))
 async def join(ctx):
     channel = ctx.author.voice.channel
     if channel:
@@ -73,7 +75,9 @@ async def join(ctx):
         await ctx.send('You need to join a voice channel first!')
 
 
-@bot.command(name='leave', help='Leaving the voice channel')  # Leave
+# Leave
+@bot.hybrid_command(name='leave', description='Leaving the voice channel', help='Leaving the voice channel')
+@discord.app_commands.guilds(discord.Object(880926842603847680), discord.Object(554699594420846616))
 async def leave(ctx):
     player = get(bot.voice_clients, guild=ctx.guild)
     if player.is_playing():
@@ -86,50 +90,53 @@ async def leave(ctx):
 
 
 # Play
-@bot.command(name='play', help='Playing a song from YouTube', aliases=['p'])
-async def play(ctx, *url):
-    song = ' '.join(url)
-    channel = ctx.author.voice.channel
-    if channel:
-        try:
-            player = await channel.connect()
-        except:
-            player = get(bot.voice_clients, guild=ctx.guild)
-        if 'https://open.spotify.com/playlist' in song:
-            playlist_URI = song.split("/")[-1].split("?")[0]
-            songs = [x["track"]["name"]
-                     for x in sp.playlist_tracks(playlist_URI)["items"]]
-            for song in songs:
-                await play(ctx, song)
-        elif 'https://open.spotify.com/album' in song:
-            album_URI = song.split("/")[-1].split("?")[0]
-            songs = [f'{x["name"]} - {x["artists"][0]["name"]}'
-                     for x in sp.album_tracks(album_URI)["items"]]
-            for song in songs:
-                await play(ctx, song)
-        else:
-            with YoutubeDL(YDL_OPTIONS) as ydl:
-                if 'https://www.youtube.com/' in song:
-                    url = song
-                else:
-                    videosSearch = VideosSearch(song, limit=1)
-                    url = 'https://www.youtube.com/watch?v=' + \
-                        videosSearch.result()['result'][0]['id']
-                info = ydl.extract_info(url, download=False)
-                URL = info['url']
-                song_queue.append(info['title'])
-                if not player.is_playing():
-                    async with ctx.typing():
-                        player.play(discord.FFmpegPCMAudio(
-                            URL, **FFMPEG_OPTIONS),
-                            after=lambda e: print('Player error: %s' % e) if e else play_next(player))
-                        await ctx.send(f'Now playing: {info["title"]}')
-                        await ctx.send(url)
-                else:
-                    url_queue.append(URL)
-                    await ctx.send(f'Added to queue: {info["title"]}')
+@bot.hybrid_command(name='play', description='Playing a song from YouTube', help='Playing a song from YouTube', aliases=['p'])
+@discord.app_commands.guilds(discord.Object(880926842603847680), discord.Object(554699594420846616))
+async def play(ctx, song):
+    if not song:
+        ctx.send('You have to provide a song!')
     else:
-        await ctx.send('You need to join a voice channel first!')
+        channel = ctx.author.voice.channel
+        if channel:
+            try:
+                player = await channel.connect()
+            except:
+                player = get(bot.voice_clients, guild=ctx.guild)
+            if 'https://open.spotify.com/playlist' in song:
+                playlist_URI = song.split("/")[-1].split("?")[0]
+                songs = [x["track"]["name"]
+                         for x in sp.playlist_tracks(playlist_URI)["items"]]
+                for song in songs:
+                    await play(ctx, song)
+            elif 'https://open.spotify.com/album' in song:
+                album_URI = song.split("/")[-1].split("?")[0]
+                songs = [f'{x["name"]} - {x["artists"][0]["name"]}'
+                         for x in sp.album_tracks(album_URI)["items"]]
+                for song in songs:
+                    await play(ctx, song)
+            else:
+                with YoutubeDL(YDL_OPTIONS) as ydl:
+                    if 'https://www.youtube.com/' in song:
+                        url = song
+                    else:
+                        videosSearch = VideosSearch(song, limit=1)
+                        url = 'https://www.youtube.com/watch?v=' + \
+                            videosSearch.result()['result'][0]['id']
+                    info = ydl.extract_info(url, download=False)
+                    URL = info['url']
+                    song_queue.append(info['title'])
+                    if not player.is_playing():
+                        async with ctx.typing():
+                            player.play(discord.FFmpegPCMAudio(
+                                URL, **FFMPEG_OPTIONS),
+                                after=lambda e: print('Player error: %s' % e) if e else play_next(player))
+                            await ctx.send(f'Now playing: {info["title"]}')
+                            await ctx.send(url)
+                    else:
+                        url_queue.append(URL)
+                        await ctx.send(f'Added to queue: {info["title"]}')
+        else:
+            await ctx.send('You need to join a voice channel first!')
 
 
 def play_next(player):
@@ -141,7 +148,9 @@ def play_next(player):
         song_queue.pop(0)
 
 
-@bot.command(name='stop', help='Stopping the song')  # Stop
+# Stop
+@bot.hybrid_command(name='stop', description='Stopping the song', help='Stopping the song')
+@discord.app_commands.guilds(discord.Object(880926842603847680), discord.Object(554699594420846616))
 async def stop(ctx, message=True):
     channel = ctx.author.voice.channel
     if channel:
@@ -154,7 +163,9 @@ async def stop(ctx, message=True):
         await ctx.send('You need to be in a voice channel for this command to work')
 
 
-@bot.command(name='skip', help='Skipping the song', aliases=['s'])  # Skip
+# Skip
+@bot.hybrid_command(name='skip', description='Skipping the song', help='Skipping the song', aliases=['s'])
+@discord.app_commands.guilds(discord.Object(880926842603847680), discord.Object(554699594420846616))
 async def skip(ctx):
     channel = ctx.author.voice.channel
     if channel:
@@ -166,7 +177,9 @@ async def skip(ctx):
         await ctx.send('You need to be in a voice channel for this command to work')
 
 
-@bot.command(name='pause', help='Pausing the song')  # Pause
+# Pause
+@bot.hybrid_command(name='pause', description='Pausing the song', help='Pausing the song')
+@discord.app_commands.guilds(discord.Object(880926842603847680), discord.Object(554699594420846616))
 async def pause(ctx):
     channel = ctx.author.voice.channel
     if channel:
@@ -178,7 +191,9 @@ async def pause(ctx):
         await ctx.send('You need to be in a voice channel for this command to work')
 
 
-@bot.command(name='resume', help='Resuming the song', aliases=['h'])  # Resume
+# Resume
+@bot.hybrid_command(name='resume', description='Resuming the song', help='Resuming the song', aliases=['h'])
+@discord.app_commands.guilds(discord.Object(880926842603847680), discord.Object(554699594420846616))
 async def resume(ctx):
     channel = ctx.author.voice.channel
     if channel:
@@ -190,44 +205,49 @@ async def resume(ctx):
         await ctx.send('You need to be in a voice channel for this command to work')
 
 
-@bot.command(name='say', help='Saying something')  # Say
-async def say(ctx):
+# Say
+@bot.hybrid_command(name='say', description='Saying something', help='Saying something')
+@discord.app_commands.guilds(discord.Object(880926842603847680), discord.Object(554699594420846616))
+async def say(ctx, text=None):
     # join vc if not in one
-    channel = ctx.author.voice.channel
-    lang = 'en'
-    if channel:
-        if not get(bot.voice_clients, guild=ctx.guild):
-            await channel.connect()
-        player = get(bot.voice_clients, guild=ctx.guild)
-        message = ctx.message.content[4:]
-        if '=' in message:
-            try:
-                message, lang = message.split(' = ')
-            except:
-                await ctx.send('Invalid syntax! ("space = space")')
-                return
-            if lang not in ['en', 'ru', 'it', 'fr', 'es', 'ja', 'de', 'pt', 'ar', 'ko']:
-                await ctx.send("""Language not supported!
-            supported languages are:
-            en - english
-            ru - russian
-            it - italian
-            fr - french
-            es - spanish
-            ja - japanese
-            de - german
-            pt - portuguese
-            ar - arabic
-            ko - korean""")
-                return
-        if not player.is_playing():
-            player.play(create_voice_stream(message, lang),
-                        after=lambda e: print('Player error: %s' % e) if e else play_next(player) if song_queue else None)
-        else:
-            await ctx.send('I am already playing somthing...')
+    if text:
+        channel = ctx.author.voice.channel
+        lang = 'en'
+        if channel:
+            if not get(bot.voice_clients, guild=ctx.guild):
+                await channel.connect()
+            player = get(bot.voice_clients, guild=ctx.guild)
+            if '=' in text:
+                try:
+                    text, lang = text.split(' = ')
+                except:
+                    await ctx.send('Invalid syntax! ("space = space")')
+                    return
+                if lang not in ['en', 'ru', 'it', 'fr', 'es', 'ja', 'de', 'pt', 'ar', 'ko']:
+                    await ctx.send("""Language not supported!
+                supported languages are:
+                en - english
+                ru - russian
+                it - italian
+                fr - french
+                es - spanish
+                ja - japanese
+                de - german
+                pt - portuguese
+                ar - arabic
+                ko - korean""")
+                    return
+            if not player.is_playing():
+                player.play(create_voice_stream(text, lang),
+                            after=lambda e: print('Player error: %s' % e) if e else play_next(player) if song_queue else None)
+                await ctx.send(f'Saying {text}')
+            else:
+                await ctx.send('I am already playing somthing...')
 
+        else:
+            await ctx.send('You need to join a voice channel first!')
     else:
-        await ctx.send('You need to join a voice channel first!')
+        await ctx.send("You must provide text!")
 
 
 def create_voice_stream(text, lang):  # Create voice stream
@@ -236,7 +256,8 @@ def create_voice_stream(text, lang):  # Create voice stream
     return discord.FFmpegPCMAudio('voice_stream.mp3')
 
 
-@bot.command(name='queue', help='Showing player queue', aliases=['q'])
+@bot.hybrid_command(name='queue', description='Showing player queue', help='Showing player queue', aliases=['q'])
+@discord.app_commands.guilds(discord.Object(880926842603847680), discord.Object(554699594420846616))
 async def queue(ctx):
     if song_queue:
         queue_str = f'*Now Playing: {song_queue[0]}*\n'
@@ -247,7 +268,8 @@ async def queue(ctx):
     await ctx.send(queue_str)
 
 
-@bot.command(name='clear', help="Clear's the queue")
+@bot.hybrid_command(name='clear', description="Clear's the queue", help="Clear's the queue")
+@discord.app_commands.guilds(discord.Object(880926842603847680), discord.Object(554699594420846616))
 async def clear(ctx):
     global song_queue, url_queue
     song_queue = []
