@@ -137,7 +137,8 @@ def play_next(player):
         player.play(discord.FFmpegPCMAudio(url_queue.pop(0), **
                                            FFMPEG_OPTIONS), after=lambda e: print(
             'Player error: %s' % e) if e else play_next(player))
-    song_queue.pop(0)
+    if song_queue:
+        song_queue.pop(0)
 
 
 @bot.command(name='stop', help='Stopping the song')  # Stop
@@ -244,6 +245,14 @@ async def queue(ctx):
     else:
         queue_str = 'Nothing is playing right now.'
     await ctx.send(queue_str)
+
+
+@bot.command(name='clear', help="Clear's the queue")
+async def clear(ctx):
+    global song_queue, url_queue
+    song_queue = []
+    url_queue = []
+    await stop(ctx, False)
 
 
 def main():
