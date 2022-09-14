@@ -4,7 +4,6 @@ from os import system as sys
 from youtube_dl import YoutubeDL
 from discord.utils import get
 from youtubesearchpython import VideosSearch
-from Lyrics import get_lyrics
 from gtts import gTTS
 from spotipy import Spotify
 import spotipy.util as util
@@ -34,10 +33,13 @@ sp = Spotify(auth=token)
 
 
 # Vars:
-current = None
 url_queue = []
-song_queue = []
-bot = commands.Bot(command_prefix='.', intents=discord.Intents.all())
+
+current_ffmpeg = None
+intents = discord.Intents.all()
+intents.message_content = True
+intents.voice_states = True
+bot = commands.Bot(command_prefix='.', intents=intents)
 
 
 @bot.event
@@ -76,7 +78,6 @@ async def leave(ctx):
 @bot.command(name='play', help='Playing a song from YouTube', aliases=['p'])
 async def play(ctx, *url):
     song = ' '.join(url)
-    global current
     channel = ctx.author.voice.channel
     if channel:
         try:
@@ -105,41 +106,36 @@ async def play(ctx, *url):
                         videosSearch.result()['result'][0]['id']
                 info = ydl.extract_info(url, download=False)
                 URL = info['url']
-                current = info['title']
                 if not player.is_playing():
                     async with ctx.typing():
-                        player.play(discord.FFmpegPCMAudio(URL, **FFMPEG_OPTIONS),
-                                    after=await play_next(player))
+                        player.play(discord.FFmpegPCMAudio(
+                            URL, **FFMPEG_OPTIONS),
+                            after=lambda e: print('Player error: %s' % e) if e else play_next(player))
                         await ctx.send(f'Now playing: {info["title"]}')
                         await ctx.send(url)
                 else:
                     url_queue.append(URL)
-                    song_queue.append(info["title"])
                     await ctx.send(f'Added to queue: {info["title"]}')
     else:
         await ctx.send('You need to join a voice channel first!')
 
 
-async def lamb(player):
-    await play_next(player)
-
-
-async def play_next(player):
+def play_next(player):
     if url_queue:
         player.play(discord.FFmpegPCMAudio(url_queue.pop(0), **
-                                           FFMPEG_OPTIONS), after=await lamb(player))
-        global current
-        current = song_queue.pop(0)
+                                           FFMPEG_OPTIONS), after=lambda e: print(
+            'Player error: %s' % e) if e else play_next(player))
 
 
 @bot.command(name='stop', help='Stopping the song')  # Stop
-async def stop(ctx):
+async def stop(ctx, message=True):
     channel = ctx.author.voice.channel
     if channel:
         player = get(bot.voice_clients, guild=ctx.guild)
         if player.is_playing():
             player.stop()
-            await ctx.send('Stopped the song')
+            if message:
+                await ctx.send('Stopped the song')
     else:
         await ctx.send('You need to be in a voice channel for this command to work')
 
@@ -150,9 +146,8 @@ async def skip(ctx):
     if channel:
         player = get(bot.voice_clients, guild=ctx.guild)
         if player.is_playing():
-            player.stop()
+            await stop(ctx, False)
             await ctx.send('Skipped the song')
-            await play_next(player)
     else:
         await ctx.send('You need to be in a voice channel for this command to work')
 
@@ -179,26 +174,6 @@ async def resume(ctx):
             await ctx.send('Resumed the song')
     else:
         await ctx.send('You need to be in a voice channel for this command to work')
-
-
-# Lyrics
-@bot.command(name='lyrics', help='Getting the lyrics of a song', aliases=['l'])
-async def lyrics(ctx, *name):
-    if name:
-        name = ' '.join(name)
-        lyrics = get_lyrics(name).replace('Embed', '')
-        if len(lyrics) > 1900:
-            await ctx.send(lyrics[:1900] + '...')
-            await ctx.send(lyrics[1900:])
-        await ctx.send(lyrics)
-    elif current != None:
-        lyrics = get_lyrics(current).replace('Embed', '')
-        if len(lyrics) > 1900:
-            await ctx.send(lyrics[:1900] + '...')
-            await ctx.send(lyrics[1900:])
-        await ctx.send(lyrics)
-    else:
-        await ctx.send('You need to play a song first!')
 
 
 @bot.command(name='say', help='Saying something')  # Say
@@ -233,34 +208,12 @@ async def say(ctx):
                 return
         if not player.is_playing():
             player.play(create_voice_stream(message, lang),
-                        after=await lamb(player))
+                        after=lambda e: print('Player error: %s' % e) if e else play_next(player))
         else:
             await ctx.send('I am already playing somthing...')
 
     else:
         await ctx.send('You need to join a voice channel first!')
-
-
-# Queue
-@bot.command(name='queue', help='Showing currntly queue', aliases=['q'])
-async def queue(ctx):
-    str = ''
-    count = 1
-    for song in song_queue:
-        str += f'{count}. {song}\n'
-        count += 1
-    await ctx.send(f"Now playing - {current}\n" + str)
-
-
-@bot.command(name='clear', help='Clearing the queue')
-async def clear(ctx):
-    global song_queue
-    global url_queue
-    global current
-    current = None
-    url_queue = []
-    song_queue = []
-    await stop(ctx)
 
 
 def create_voice_stream(text, lang):  # Create voice stream
