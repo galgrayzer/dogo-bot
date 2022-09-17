@@ -14,8 +14,8 @@ setup(
     description=("A media bot for discord"),
     license="BSD",
     url="https://github.com/galgrayzer/dogo-bot",
-    packages=['discord.py', 'youtube_dl', 'youtube-search-python',
-              'gtts', 'spotipy', 'lyricsgenius'],
+    packages=["discord.py", 'youtube_dl', 'youtube-search-python',
+              'gtts', 'spotipy', 'lyricsgenius', 'pynacl'],
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Topic :: Utilities",
