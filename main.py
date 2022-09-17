@@ -6,8 +6,9 @@ from discord.utils import get
 from youtubesearchpython import VideosSearch
 from gtts import gTTS
 from spotipy import Spotify
-import spotipy.util as util
 from lyricsgenius import Genius
+from spotipy.oauth2 import SpotifyClientCredentials
+from spotipy import Spotify
 
 
 FFMPEG_OPTIONS = {
@@ -29,9 +30,9 @@ YDL_OPTIONS = {
 
 # Api's:
 
-token = util.prompt_for_user_token('david.kim.9', 'user-read-currently-playing', client_id='02f03d97e6874a8ab9607ea1e987313c',
-                                   client_secret='d433765cb3444c3d98abb248df2fcfb9', redirect_uri='http://localhost:8888/callback')
-sp = Spotify(auth=token)
+client_credentials_manager = SpotifyClientCredentials(
+    client_id='02f03d97e6874a8ab9607ea1e987313c', client_secret='d433765cb3444c3d98abb248df2fcfb9')
+sp = Spotify(client_credentials_manager=client_credentials_manager)
 genius = Genius(
     access_token='bnD84nuWfusmxkiVy4kW0mWmtBx5xC7k15Os73VHs64dftDj5Bih3T6nLAOEmc2r')
 
