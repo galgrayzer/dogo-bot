@@ -1,0 +1,6 @@
+discord.py==2.0.1
+youtube_dl==2021.12.17
+youtube-search-python==1.6.2
+gtts==2.2.4
+spotipy==2.0.6
+lyricsgenius==3.0.1
