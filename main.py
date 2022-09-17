@@ -7,6 +7,7 @@ from youtubesearchpython import VideosSearch
 from gtts import gTTS
 from spotipy import Spotify
 import spotipy.util as util
+from lyricsgenius import Genius
 
 
 FFMPEG_OPTIONS = {
@@ -26,16 +27,19 @@ YDL_OPTIONS = {
     'source_address': '0.0.0.0'
 }
 
+# Api's:
 
 token = util.prompt_for_user_token('david.kim.9', 'user-read-currently-playing', client_id='02f03d97e6874a8ab9607ea1e987313c',
                                    client_secret='d433765cb3444c3d98abb248df2fcfb9', redirect_uri='http://localhost:8888/callback')
 sp = Spotify(auth=token)
+genius = Genius(
+    access_token='bnD84nuWfusmxkiVy4kW0mWmtBx5xC7k15Os73VHs64dftDj5Bih3T6nLAOEmc2r')
 
 
 # Vars:
 
-url_queue = []
-song_queue = []
+url_queue = {}
+song_queue = {}
 
 # Intents:
 
@@ -88,6 +92,10 @@ async def leave(ctx):
 # Play
 @bot.hybrid_command(name='play', description='Playing a song from YouTube', help='Playing a song from YouTube', aliases=['p'])
 async def play(ctx, *, song):
+    server = ctx.guild
+    if server not in song_queue.keys():
+        song_queue[server] = []
+        url_queue[server] = []
     if not song:
         ctx.send('You have to provide a song!')
     else:
@@ -119,28 +127,28 @@ async def play(ctx, *, song):
                             videosSearch.result()['result'][0]['id']
                     info = ydl.extract_info(url, download=False)
                     URL = info['url']
-                    song_queue.append(info['title'])
+                    song_queue[server].append(info['title'])
                     if not player.is_playing():
                         async with ctx.typing():
                             player.play(discord.FFmpegPCMAudio(
                                 URL, **FFMPEG_OPTIONS),
-                                after=lambda e: print('Player error: %s' % e) if e else play_next(player))
+                                after=lambda e: print('Player error: %s' % e) if e else play_next(player, server))
                             await ctx.send(f'Now playing: {info["title"]}')
                             await ctx.send(url)
                     else:
-                        url_queue.append(URL)
+                        url_queue[server].append(URL)
                         await ctx.send(f'Added to queue: {info["title"]}')
         else:
             await ctx.send('You need to join a voice channel first!')
 
 
-def play_next(player):
-    if url_queue:
-        player.play(discord.FFmpegPCMAudio(url_queue.pop(0), **
+def play_next(player, server):
+    if url_queue[server] != []:
+        player.play(discord.FFmpegPCMAudio(url_queue[server].pop(0), **
                                            FFMPEG_OPTIONS), after=lambda e: print(
-            'Player error: %s' % e) if e else play_next(player))
-    if song_queue:
-        song_queue.pop(0)
+            'Player error: %s' % e) if e else play_next(player, server))
+    if song_queue[server] != []:
+        song_queue[server].pop(0)
 
 
 # Stop
@@ -229,7 +237,7 @@ async def say(ctx, text=None):
                     return
             if not player.is_playing():
                 player.play(create_voice_stream(text, lang),
-                            after=lambda e: print('Player error: %s' % e) if e else play_next(player) if song_queue else None)
+                            after=lambda e: print('Player error: %s' % e) if e else play_next(player, ctx.server) if song_queue[ctx.server] != [] else None)
                 await ctx.send(f'Saying {text}')
             else:
                 await ctx.send('I am already playing somthing...')
@@ -248,10 +256,11 @@ def create_voice_stream(text, lang):  # Create voice stream
 
 @bot.hybrid_command(name='queue', description='Showing player queue', help='Showing player queue', aliases=['q'])
 async def queue(ctx):
-    if song_queue:
-        queue_str = f'*Now Playing: {song_queue[0]}*\n'
-        for index in range(1, len(song_queue)):
-            queue_str += f'{index}. {song_queue[index]}\n'
+    server = ctx.guild
+    if song_queue[server]:
+        queue_str = f'*Now Playing: {song_queue[server][0]}*\n'
+        for index in range(1, len(song_queue[server])):
+            queue_str += f'{index}. {song_queue[server][index]}\n'
     else:
         queue_str = 'Nothing is playing right now.'
     await ctx.send(queue_str)
@@ -260,9 +269,27 @@ async def queue(ctx):
 @bot.hybrid_command(name='clear', description="Clear's the queue", help="Clear's the queue")
 async def clear(ctx):
     global song_queue, url_queue
-    song_queue = []
-    url_queue = []
+    song_queue[ctx.guild] = []
+    url_queue[ctx.guild] = []
     await stop(ctx, False)
+
+
+@bot.hybrid_command(name='lyrics', description='Geting the lyrics of the current playing song', help='Geting the lyrics of the current playing song', aliases=['l'])
+@discord.app_commands.guilds(discord.Object(880926842603847680), discord.Object(554699594420846616))
+async def lyrics(ctx):
+    try:
+        song_lyrics = genius.search_song(song_queue[ctx.guild][0]).lyrics.replace(
+            "EmbedShare URLCopyEmbedCopy", "").replace("Embed", "")
+        if len(song_lyrics) < 2000:
+            await ctx.send(song_lyrics)
+        else:
+            try:
+                await ctx.send(song_lyrics[:2000])
+                await ctx.send(song_lyrics[2000:])
+            except:
+                await ctx.send('Song lyrics too long.')
+    except:
+        await ctx.send('Not found lyrics.')
 
 
 def main():
