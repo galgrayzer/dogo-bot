@@ -152,7 +152,7 @@ def play_next(player, server):
     if url_queue[server] != []:
         player.play(discord.FFmpegPCMAudio(url_queue[server].pop(0), **
                                            FFMPEG_OPTIONS), after=lambda e: print(
-            'Player error: %s' % e) if e else play_next(player))
+            'Player error: %s' % e) if e else play_next(player, server))
     if song_queue[server] != []:
         song_queue[server].pop(0)
 
