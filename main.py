@@ -60,6 +60,11 @@ async def on_ready():
     await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="Your command | perfix: ."))
     await bot.tree.sync()
 
+
+@bot.event
+async def on_guild_join():
+    await bot.change_presence(activity=discord.Activity(type=discord.ActivityType.listening, name="Your command | perfix: ."))
+
 # Commands:
 
 
