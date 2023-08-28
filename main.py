@@ -294,7 +294,7 @@ async def lyrics(ctx):
 
 def main():
     sys('cls')
-    bot.run('ODgwOTMzMTk1Njk5MzQzNDQw.GyGRaF.GTGLivPyJe2I66Sm99Sxhl7pEXnXQ_-USwH_j4')
+    bot.run('ODgwOTMzMTk1Njk5MzQzNDQw.GEoOor.I9XdN7QUyKxHaTiXytUwfCMg3ZOvLgEKkyJy_0')
 
 
 if __name__ == '__main__':
