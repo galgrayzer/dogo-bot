@@ -3,6 +3,6 @@ gTTS
 lyricsgenius
 Pillow
 PyNaCl
-youtube-dl
+yt-dlp
 youtube-search-python
 spotipy

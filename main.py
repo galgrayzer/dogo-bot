@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from os import system as sys
-from youtube_dl import YoutubeDL
+from yt_dlp import YoutubeDL
 from discord.utils import get
 from youtubesearchpython import VideosSearch
 from gtts import gTTS
@@ -283,24 +283,15 @@ async def clear(ctx):
 @bot.hybrid_command(name='lyrics', description='Geting the lyrics of the current playing song', help='Geting the lyrics of the current playing song', aliases=['l'])
 @discord.app_commands.guilds(discord.Object(880926842603847680), discord.Object(554699594420846616))
 async def lyrics(ctx):
-    try:
-        song_lyrics = genius.search_song(song_queue[ctx.guild][0]).lyrics.replace(
-            "EmbedShare URLCopyEmbedCopy", "").replace("Embed", "")
-        if len(song_lyrics) < 2000:
-            await ctx.send(song_lyrics)
-        else:
-            try:
-                await ctx.send(song_lyrics[:2000])
-                await ctx.send(song_lyrics[2000:])
-            except:
-                await ctx.send('Song lyrics too long.')
-    except:
-        await ctx.send('Not found lyrics.')
+    artist = song_queue[ctx.guild][0].split(' - ')[0]
+    song_lyrics = genius.search_song(
+        song_queue[ctx.guild][0], artist).lyrics.replace("You might also likeEmbed", "")
+    await ctx.send(song_lyrics)
 
 
 def main():
     sys('cls')
-    bot.run('')
+    bot.run('ODgwOTMzMTk1Njk5MzQzNDQw.GKfuMb.xhchLkr_5R45kmIOUiJj4-I0Y8_RKktnwqRJnc')
 
 
 if __name__ == '__main__':
